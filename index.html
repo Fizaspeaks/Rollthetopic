@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Speaking Topic Spinner</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --accent: #f59e0b;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        p.subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        .spinner-window {
+            height: 90px;
+            overflow: hidden;
+            border: 4px solid var(--primary);
+            border-radius: 16px;
+            background: #fafafa;
+            position: relative;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        #topic-text {
+            font-size: 18px;
+            font-weight: 700;
+            padding: 0 15px;
+            line-height: 1.4;
+        }
+
+        .rolling {
+            animation: slotRoll 0.15s linear infinite;
+        }
+
+        @keyframes slotRoll {
+            0% { transform: translateY(-20px); opacity: 0.3; }
+            50% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(20px); opacity: 0.3; }
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { background-color: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+
+        .btn-record {
+            background-color: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-record.recording {
+            background-color: #10b981;
+        }
+
+        /* Heartbeat Recording Visual */
+        .heartbeat-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin: 20px 0;
+            height: 40px;
+        }
+
+        .bar {
+            width: 6px;
+            height: 10px;
+            background-color: #ef4444;
+            border-radius: 3px;
+        }
+
+        .recording-active .bar {
+            animation: heartbeat 1.2s ease-in-out infinite alternate;
+            background-color: #10b981;
+        }
+
+        /* Staggered animation to look like an audio wave heartbeat */
+        .bar:nth-child(1) { animation-delay: 0.1s; }
+        .bar:nth-child(2) { animation-delay: 0.4s; height: 25px; }
+        .bar:nth-child(3) { animation-delay: 0.2s; height: 40px; }
+        .bar:nth-child(4) { animation-delay: 0.6s; height: 20px; }
+        .bar:nth-child(5) { animation-delay: 0.3s; }
+
+        @keyframes heartbeat {
+            0% { transform: scaleY(0.3); }
+            50% { transform: scaleY(1.2); }
+            100% { transform: scaleY(0.3); }
+        }
+
+        .status-panel {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #e5e7eb;
+            display: none;
+        }
+
+        .timer {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 15px;
+        }
+
+        .download-alert {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #047857;
+            font-weight: 600;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Topic Roulette 🎲</h1>
+    <p class="subtitle">Roll a topic, start recording, and it will auto-save to your device!</p>
+
+    <div class="spinner-window">
+        <div id="topic-text">Press the Lever below!</div>
+    </div>
+
+    <button id="spin-btn" class="btn" onclick="spinLever()">🎰 Pull the Lever</button>
+
+    <div id="status-panel" class="status-panel">
+        <div id="timer" class="timer">02:00</div>
+        
+        <div id="heartbeat-box" class="heartbeat-container">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+
+        <button id="record-btn" class="btn btn-record" onclick="toggleRecording()">🎙️ Start Recording</button>
+        <div id="download-msg" class="download-alert">✅ Audio recorded & saved automatically to your Downloads folder!</div>
+    </div>
+</div>
+
+<script>
+    const topics = [
+        "What is your favorite memory from childhood?", "If you won a million dollars, what is the first thing you would buy?", "Describe your dream vacation destination.", "What is the best movie you have ever seen and why?", "If you could have any superpower, what would it be?",
+        "Do you prefer living in a big city or a small village? Why?", "What is your favorite holiday and how do you celebrate it?", "Describe a person who has influenced your life greatly.", "What are the qualities of a good friend?", "If you could travel back in time, which era would you visit?",
+        "What is your absolute favorite food to eat?", "Do you prefer reading books or watching movies?", "Describe your typical morning routine.", "What is the most useful piece of technology you own?", "If you could learn any new skill instantly, what would it be?",
+        "What are your thoughts on social media?", "Describe a difficult challenge you overcame.", "What is your favorite season of the year and why?", "If you could meet any famous person, living or dead, who would it be?", "What are your short-term and long-term goals?",
+        "How do you usually handle stress?", "Describe a memorable gift you received.", "Do you prefer cats, dogs, or other animals?", "What is the best piece of advice anyone has ever given you?", "If you could live in any country for a year, where would it be?",
+        "Describe your dream job.", "What is your favorite sport to play or watch?", "Do you think money can buy happiness? Why or why not?", "What is something you are deeply passionate about?", "Describe a beautiful place you have visited.",
+        "What is your favorite book and what is it about?", "If you could open a restaurant, what kind of food would you serve?", "How do you like to spend your weekends?", "What is the most important lesson life has taught you?", "Describe an interesting tradition in your culture.",
+        "Do you think robots will replace most human jobs in the future?", "What is your favorite type of music or musical artist?", "If you could change one thing about the world, what would it be?", "Describe a time you got completely lost.", "What are the advantages of learning a second language?",
+        "Do you prefer cooking at home or eating out?", "What is your favorite outdoor activity?", "Describe a historical event that interests you.", "If you could speak directly to your younger self, what would you say?", "What is the most adventurous thing you have ever done?",
+        "How do you stay motivated when things get tough?", "Describe your best friend.", "Do you prefer hot weather or cold weather?", "What is a major problem facing the world today?", "If you could create a new holiday, what would it celebrate?",
+        "What is your favorite childhood game?", "Describe an item you own that is very special to you.", "Do you prefer clothes that are comfortable or stylish?", "What is the funniest thing that has ever happened to you?", "If you could live on another planet, would you go?",
+        "Describe a creative hobby you enjoy (like drawing or writing).", "What is your favorite family recipe?", "Do you think public transportation should be completely free?", "What are the pros and cons of working from home?", "If you could be an animal for one day, which one would you choose?",
+        "Describe a museum or art gallery you visited.", "What is your favorite way to exercise?", "Do you believe in luck? Why or why not?", "What is your biggest fear and how do you face it?", "If you could change your name, what would you choose?",
+        "Describe a famous landmark in your country.", "What is your favorite thing about yourself?", "Do you prefer saving money or spending it?", "What is the most interesting documentary you've watched?", "If you could invent a machine, what would it do?",
+        "Describe a time you helped a stranger.", "What is your favorite time of the day?", "Do you think uniforms should be mandatory in schools?", "What is the best concert or event you have attended?", "If you could only eat one food for the rest of your life, what is it?",
+        "Describe an app on your phone that you use every day.", "What is your favorite memory with your family?", "Do you prefer a quiet night in or a big party night out?", "What is a custom from another culture that you find fascinating?", "If you could master any musical instrument, what would it be?",
+        "Describe a teacher who inspired you.", "What is your favorite way to travel (car, train, plane)?", "Do you think video games are good or bad for people?", "What is a goal you achieved recently that made you proud?", "If you could build your dream house, what special room would it have?",
+        "Describe a popular festival in your country.", "What is your favorite smell or fragrance?", "Do you think extreme sports are worth the risk?", "What is something you want to buy in the near future?", "If you could instantly speak 5 languages, which ones would you pick?",
+        "Describe a habit you want to break.", "What is your favorite television show or series?", "Do you think exploring outer space is a waste of money?", "What is the nicest thing anyone has done for you?", "If you could go to dinner with 3 historical figures, who are they?",
+        "Describe a project you worked hard on.", "What is your favorite type of weather?", "Do you prefer planned schedules or spontaneous adventures?", "What is the most beautiful sound in the world to you?", "What does success mean to you?"
+    ];
+
+    let timerInterval;
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    function spinLever() {
+        const topicText = document.getElementById('topic-text');
+        const spinBtn = document.getElementById('spin-btn');
+        const statusPanel = document.getElementById('status-panel');
+        const heartbeatBox = document.getElementById('heartbeat-box');
+        const downloadMsg = document.getElementById('download-msg');
+        
+        // Completely stop any ongoing recording or running timers
+        clearInterval(timerInterval);
+        if(isRecording) { toggleRecording(); }
+        
+        document.getElementById('timer').innerText = "02:00";
+        statusPanel.style.display = "none";
+        heartbeatBox.style.display = "none";
+        downloadMsg.style.display = "none";
+        
+        spinBtn.disabled = true;
+        topicText.classList.add('rolling');
+
+        let duration = 2000; 
+        let intervalTime = 100;
+        let elapsed = 0;
+
+        let rollEffect = setInterval(() => {
+            const tempIndex = Math.floor(Math.random() * topics.length);
+            topicText.innerText = topics[tempIndex];
+            elapsed += intervalTime;
+            
+            if (elapsed >= duration) {
+                clearInterval(rollEffect);
+                topicText.classList.remove('rolling');
+                
+                const finalIndex = Math.floor(Math.random() * topics.length);
+                topicText.innerText = topics[finalIndex];
+                
+                // Show panel but DO NOT start timer yet
+                statusPanel.style.display = "block";
+                spinBtn.disabled = false;
+            }
+        }, intervalTime);
+    }
+
+    function startTimer(seconds) {
+        const timerDisplay = document.getElementById('timer');
+        let timeRemaining = seconds;
+
+        timerInterval = setInterval(() => {
+            let minutes = Math.floor(timeRemaining / 60);
+            let secs = timeRemaining % 60;
+
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            secs = secs < 10 ? '0' + secs : secs;
+
+            timerDisplay.innerText = `${minutes}:${secs}`;
+
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                if (isRecording) { toggleRecording(); }
+            }
+            timeRemaining--;
+        }, 1000);
+    }
+
+    async function toggleRecording() {
+        const recordBtn = document.getElementById('record-btn');
+        const heartbeatBox = document.getElementById('heartbeat-box');
+        const downloadMsg = document.getElementById('download-msg');
+
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => { audioChunks.push(event.data); };
+
+                mediaRecorder.onstop = () => {
+                    // Force generate file download payload directly out of the preview sandbox
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = audioUrl;
+                    downloadLink.download = `Speaking_Practice_${Date.now()}.mp3`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    
+                    downloadMsg.style.display = "block";
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // Start the timer ONLY now!
+                startTimer(120);
+
+                recordBtn.innerText = "🛑 Stop & Save Recording";
+                recordBtn.classList.add('recording');
+                
+                // Show and activate the heartbeat visualizer 
+                heartbeatBox.style.display = "flex";
+                heartbeatBox.classList.add('recording-active');
+                downloadMsg.style.display = "none";
+
+            } catch (err) {
+                alert("Microphone connection failed. Please ensure app browser permissions are allowed.");
+                console.error(err);
+            }
+        } else {
+            clearInterval(timerInterval);
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            
+            recordBtn.innerText = "🎙️ Start Recording";
+            recordBtn.classList.remove('recording');
+            heartbeatBox.classList.remove('recording-active');
+            heartbeatBox.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>
